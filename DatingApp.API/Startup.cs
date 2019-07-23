@@ -17,6 +17,7 @@ using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.AspNetCore.Diagnostics;
 using DatingApp.API.Helpers;
+using AutoMapper;
 
 namespace DatingApp.API
 {
@@ -33,9 +34,15 @@ namespace DatingApp.API
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddDbContext<DataContext>(x => x.UseSqlite(Configuration.GetConnectionString("DefaultConnection")));
-            services.AddMvc();
+            services.AddMvc().AddJsonOptions(opt => {
+                    opt.SerializerSettings.ReferenceLoopHandling = 
+                        Newtonsoft.Json.ReferenceLoopHandling.Ignore;
+                });
             services.AddCors();
+            services.AddAutoMapper();
+            services.AddTransient<Seed>();
             services.AddScoped<IAuthRepository, AuthRepository>();
+            services.AddScoped<IDatingRepository, DatingRepository>();
             services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 .AddJwtBearer(options => {
                     options.TokenValidationParameters = new TokenValidationParameters
@@ -50,7 +57,7 @@ namespace DatingApp.API
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IHostingEnvironment env)
+        public void Configure(IApplicationBuilder app, IHostingEnvironment env, Seed seeder)
         {
             if (env.IsDevelopment())
             {
@@ -71,6 +78,8 @@ namespace DatingApp.API
                     });
                 }});
             }
+            // uncomment the below code to cretae database
+            // seeder.SeedUsers();
             app.UseCors(x => x.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
             app.UseAuthentication();
             app.UseMvc();
